@@ -2,6 +2,7 @@
 {:binarize} = require "pipeline.binarize"
 {:downsample} = require "pipeline.image"
 {:build, :write} = require "pipeline.sepfile"
+{:normalize} = require "pipeline.contrast"
 encode = require "pipeline.djvu_encode"
 
 -- doc : ffi.mupdf.Document. page_number : 0-indexé. opts :
@@ -13,6 +14,12 @@ encode = require "pipeline.djvu_encode"
 --     automatique (modes "bw" et "mixed")
 --   bw_bias: décalage appliqué au seuil d'Otsu calculé automatiquement
 --     (modes "bw" et "mixed", ignoré si bw_threshold est fourni)
+--   normalize_contrast: booléen, étire le contraste de chaque page (par canal,
+--     indépendamment d'une page à l'autre) avant tout traitement — corrige les
+--     pages sépia/grisées et les variations de niveaux entre pages (voir
+--     pipeline.contrast). Recommandé surtout en mode "bw", utilisable partout.
+--   contrast_clip: part en % de pixels extrêmes écrêtés par ce réglage
+--     (défaut 1.0), ignoré si normalize_contrast est faux
 --   tmp_dir: répertoire de travail pour les fichiers intermédiaires
 -- out_path : chemin du fichier .djvu de sortie pour cette page.
 process_page = (doc, page_number, opts, out_path) ->
@@ -23,6 +30,7 @@ process_page = (doc, page_number, opts, out_path) ->
   tmp_dir = opts.tmp_dir or "/tmp"
 
   pix = doc\render_page page_number, mask_dpi
+  pix = normalize pix, opts.contrast_clip if opts.normalize_contrast
   mask = binarize pix, {threshold: opts.bw_threshold, bias: opts.bw_bias}
 
   lines = nil

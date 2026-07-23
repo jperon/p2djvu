@@ -30,6 +30,11 @@ parse_args = (argv) ->
       when "--threshold-bias"
         i += 1
         opts.bw_bias = tonumber argv[i]
+      when "--normalize-contrast"
+        opts.normalize_contrast = true
+      when "--contrast-clip"
+        i += 1
+        opts.contrast_clip = tonumber argv[i]
       when "--no-text"
         opts.text = false
       when "--ocr"
@@ -55,6 +60,13 @@ Options:
   --threshold-bias N      Décalage appliqué au seuil calculé automatiquement,
                           modes bw/mixed (négatif = moins d'encre détectée,
                           positif = plus d'encre détectée ; défaut: 0)
+  --normalize-contrast    Étire le contraste de chaque page (par canal,
+                          indépendamment d'une page à l'autre) avant tout
+                          traitement : corrige les pages sépia/grisées et les
+                          écarts de niveaux entre pages. Surtout utile en
+                          mode bw, mais s'applique à tous les modes.
+  --contrast-clip N       Part en % de pixels extrêmes écrêtés par
+                          --normalize-contrast (défaut: 1.0)
   --no-text               Ne pas inclure le calque texte extrait du PDF
   --ocr                   OCR de secours (tesseract) si le PDF n'a pas de texte intégré
 ]]

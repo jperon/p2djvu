@@ -52,6 +52,18 @@ p2djvu --mode mixed --threshold-bias -80 mon-document.pdf mon-document.djvu
 
 Dans les deux cas, le plus simple est de tester d'abord sur une seule page en extrayant un court PDF (par exemple avec un outil comme `gs` ou `qpdf`), afin de trouver rapidement le bon réglage avant de lancer la conversion complète.
 
+## Corriger les pages sépia, jaunies ou grisées
+
+Un document scanné a rarement un fond parfaitement blanc : papier jauni, sépia, ou simplement un peu gris — et ce fond varie souvent d'une page à l'autre (éclairage du scanner, usure du papier…). L'option `--normalize-contrast` corrige cela automatiquement, page par page :
+
+```
+p2djvu --mode bw --normalize-contrast mon-document.pdf mon-document.djvu
+```
+
+Elle recale le noir et le blanc de chaque page indépendamment, ce qui neutralise à la fois le manque de contraste et une teinte parasite (sépia, jaunie…). C'est particulièrement utile en mode `bw`, car cela permet ensuite d'utiliser un `--threshold` fixe identique sur tout le document sans que les pages les plus sombres ou les plus pâles n'en pâtissent — mais l'option fonctionne aussi en `color` ou `mixed`.
+
+- `--contrast-clip N` : ajuste la sensibilité de la correction (part, en %, de pixels extrêmes de chaque page considérée comme du bruit et ignorée ; défaut `0.5`). Sur une page où le texte est très clairsemé (peu de lignes sur une grande page blanche), une valeur trop élevée peut désactiver la correction faute de pouvoir isoler l'encre du fond — dans ce cas, réduisez-la (`0.2`, `0.1`…).
+
 ## Ajuster la résolution
 
 ```
