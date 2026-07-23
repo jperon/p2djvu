@@ -2,7 +2,18 @@
 {:binarize} = require "pipeline.binarize"
 {:downsample} = require "pipeline.image"
 {:build, :write} = require "pipeline.sepfile"
+{:normalize} = require "pipeline.contrast"
 encode = require "pipeline.djvu_encode"
+
+-- Au-delà de cette proportion de pixels classés "encre", la binarisation est
+-- très probablement dégénérée (illustration hachurée, page mal seuillée…) :
+-- mieux vaut arrêter avec un message clair que de transmettre à cjb2/csepdjvu
+-- une image quasi uniforme, dont le comportement en sortie (page noire,
+-- voire échec de l'encodeur selon la version de djvulibre) est peu fiable.
+-- Une page de texte, même dense, dépasse rarement 30-40% d'encre réelle ;
+-- 60% laisse une marge large tout en attrapant les cas réellement dégénérés
+-- (observé : 81% sur une page de BD hachurée mal seuillée).
+MAX_SANE_INK_RATIO = 0.6
 
 -- doc : ffi.mupdf.Document. page_number : 0-indexé. opts :
 --   mode: "bw" | "color" | "mixed" (défaut "mixed")
@@ -13,6 +24,12 @@ encode = require "pipeline.djvu_encode"
 --     automatique (modes "bw" et "mixed")
 --   bw_bias: décalage appliqué au seuil d'Otsu calculé automatiquement
 --     (modes "bw" et "mixed", ignoré si bw_threshold est fourni)
+--   normalize_contrast: booléen, étire le contraste de chaque page (par canal,
+--     indépendamment d'une page à l'autre) avant tout traitement — corrige les
+--     pages sépia/grisées et les variations de niveaux entre pages (voir
+--     pipeline.contrast). Recommandé surtout en mode "bw", utilisable partout.
+--   contrast_clip: part en % de pixels extrêmes écrêtés par ce réglage
+--     (défaut 1.0), ignoré si normalize_contrast est faux
 --   tmp_dir: répertoire de travail pour les fichiers intermédiaires
 -- out_path : chemin du fichier .djvu de sortie pour cette page.
 process_page = (doc, page_number, opts, out_path) ->
@@ -23,7 +40,12 @@ process_page = (doc, page_number, opts, out_path) ->
   tmp_dir = opts.tmp_dir or "/tmp"
 
   pix = doc\render_page page_number, mask_dpi
+  pix = normalize pix, opts.contrast_clip if opts.normalize_contrast
   mask = binarize pix, {threshold: opts.bw_threshold, bias: opts.bw_bias}
+
+  if (mode == "bw" or mode == "mixed") and mask.ink_ratio > MAX_SANE_INK_RATIO
+    error {msg: "page #{page_number + 1} : binarisation dégénérée (#{math.floor(mask.ink_ratio * 100)}% de la page classée « encre »), seuil=#{mask.threshold}. " ..
+      "Essayez --threshold-bias (valeur négative) pour réduire l'encre détectée, --mode color, ou ajustez/désactivez --normalize-contrast."}
 
   lines = nil
   if want_text

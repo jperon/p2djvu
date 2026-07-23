@@ -37,11 +37,11 @@ p2djvu --mode color mon-document.pdf mon-document.djvu
 - **`bw`** : noir et blanc pur. Idéal pour un document strictement composé de texte imprimé net (pas d'illustration ni de trame grise), donne les fichiers les plus légers.
 - **`mixed`** : sépare le texte net (mis au premier plan) du reste de la page (mis en arrière-plan, en plus basse résolution), pour alléger encore le fichier — souvent nettement plus que `color` sur un document adapté. À réserver aux documents de texte pur avec éventuellement quelques photos : sur des illustrations détaillées, hachurées ou nuancées, ce mode peut mal évaluer ce qui est « texte » et produire des pages noircies ou abîmées. Avant d'abandonner ce mode pour `color`, essayez de le rééquilibrer avec `--threshold-bias` (voir ci-dessous) : sur bien des documents « limites » (BD au trait fin, scans un peu sombres…), un simple réglage suffit à obtenir un `mixed` propre et plus léger que `color`.
 
-### Rééquilibrer le mode `mixed` (pages noircies ou trouées)
+### Rééquilibrer les modes `bw` et `mixed` (pages noircies ou trouées)
 
-Le mode `mixed` décide pixel par pixel ce qui est « encre » (mis au premier plan, net) ou « fond » (mis en arrière-plan, plus flou) à partir d'un seuil de luminosité calculé automatiquement sur chaque page. Sur certains documents (dessins très hachurés, scans sombres ou au contraste inhabituel), ce seuil automatique se trompe et produit des pages entièrement noires, ou au contraire des pages où le texte a disparu.
+Les modes `bw` et `mixed` décident pixel par pixel ce qui est « encre » (noir, ou mis au premier plan en mode `mixed`) à partir d'un seuil de luminosité calculé automatiquement sur chaque page. Sur certains documents (dessins très hachurés, scans sombres ou au contraste inhabituel — et c'est encore plus vrai en combinaison avec `--normalize-contrast`, qui accentue les écarts), ce seuil automatique se trompe et produit des pages entièrement noires, ou au contraire des pages où le texte a disparu.
 
-Deux options permettent de corriger ce réglage :
+Quand p2djvu détecte qu'une page bascule ainsi presque entièrement en noir, il s'arrête avec un message explicite (`binarisation dégénérée`) plutôt que de produire un fichier illisible ou de laisser les outils d'encodage échouer de façon peu claire. Deux options permettent de corriger ce réglage :
 
 ```
 p2djvu --mode mixed --threshold-bias -80 mon-document.pdf mon-document.djvu
@@ -51,6 +51,18 @@ p2djvu --mode mixed --threshold-bias -80 mon-document.pdf mon-document.djvu
 - **`--threshold N`** : impose un seuil absolu (de 0 = tout au fond, à 255 = tout à l'encre), sans passer par le calcul automatique. Utile si `--threshold-bias` ne suffit pas, ou pour reproduire exactement le même réglage sur toutes les pages d'un document dont la luminosité varie peu d'une page à l'autre.
 
 Dans les deux cas, le plus simple est de tester d'abord sur une seule page en extrayant un court PDF (par exemple avec un outil comme `gs` ou `qpdf`), afin de trouver rapidement le bon réglage avant de lancer la conversion complète.
+
+## Corriger les pages sépia, jaunies ou grisées
+
+Un document scanné a rarement un fond parfaitement blanc : papier jauni, sépia, ou simplement un peu gris — et ce fond varie souvent d'une page à l'autre (éclairage du scanner, usure du papier…). L'option `--normalize-contrast` corrige cela automatiquement, page par page :
+
+```
+p2djvu --mode bw --normalize-contrast mon-document.pdf mon-document.djvu
+```
+
+Elle recale le noir et le blanc de chaque page indépendamment, ce qui neutralise à la fois le manque de contraste et une teinte parasite (sépia, jaunie…). C'est particulièrement utile en mode `bw`, car cela permet ensuite d'utiliser un `--threshold` fixe identique sur tout le document sans que les pages les plus sombres ou les plus pâles n'en pâtissent — mais l'option fonctionne aussi en `color` ou `mixed`.
+
+- `--contrast-clip N` : ajuste la sensibilité de la correction (part, en %, de pixels extrêmes de chaque page considérée comme du bruit et ignorée ; défaut `0.5`). Sur une page où le texte est très clairsemé (peu de lignes sur une grande page blanche), une valeur trop élevée peut désactiver la correction faute de pouvoir isoler l'encre du fond — dans ce cas, réduisez-la (`0.2`, `0.1`…).
 
 ## Ajuster la résolution
 
