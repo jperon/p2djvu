@@ -5,6 +5,16 @@
 {:normalize} = require "pipeline.contrast"
 encode = require "pipeline.djvu_encode"
 
+-- Au-delà de cette proportion de pixels classés "encre", la binarisation est
+-- très probablement dégénérée (illustration hachurée, page mal seuillée…) :
+-- mieux vaut arrêter avec un message clair que de transmettre à cjb2/csepdjvu
+-- une image quasi uniforme, dont le comportement en sortie (page noire,
+-- voire échec de l'encodeur selon la version de djvulibre) est peu fiable.
+-- Une page de texte, même dense, dépasse rarement 30-40% d'encre réelle ;
+-- 60% laisse une marge large tout en attrapant les cas réellement dégénérés
+-- (observé : 81% sur une page de BD hachurée mal seuillée).
+MAX_SANE_INK_RATIO = 0.6
+
 -- doc : ffi.mupdf.Document. page_number : 0-indexé. opts :
 --   mode: "bw" | "color" | "mixed" (défaut "mixed")
 --   mask_dpi: résolution du rendu servant au masque/texte (défaut 300)
@@ -32,6 +42,10 @@ process_page = (doc, page_number, opts, out_path) ->
   pix = doc\render_page page_number, mask_dpi
   pix = normalize pix, opts.contrast_clip if opts.normalize_contrast
   mask = binarize pix, {threshold: opts.bw_threshold, bias: opts.bw_bias}
+
+  if (mode == "bw" or mode == "mixed") and mask.ink_ratio > MAX_SANE_INK_RATIO
+    error {msg: "page #{page_number + 1} : binarisation dégénérée (#{math.floor(mask.ink_ratio * 100)}% de la page classée « encre »), seuil=#{mask.threshold}. " ..
+      "Essayez --threshold-bias (valeur négative) pour réduire l'encre détectée, --mode color, ou ajustez/désactivez --normalize-contrast."}
 
   lines = nil
   if want_text

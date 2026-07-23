@@ -53,6 +53,11 @@ binarize = (pix, opts) ->
   threshold += opts.bias or 0
   threshold = math.max 0, math.min 255, threshold
 
+  ink_pixels = 0
+  for t = 0, threshold - 1
+    ink_pixels += histogram[t]
+  ink_ratio = ink_pixels / (pix.width * pix.height)
+
   rows = {}
   for y = 0, pix.height - 1
     row = ffi.new "uint8_t[?]", pix.width
@@ -61,7 +66,7 @@ binarize = (pix, opts) ->
       row[x] = (luminance(r, g, b) < threshold) and 1 or 0
     rows[y + 1] = row
 
-  {width: pix.width, height: pix.height, :threshold, :rows}
+  {width: pix.width, height: pix.height, :threshold, :ink_ratio, :rows}
 
 -- Écrit le résultat de binarize() au format PBM binaire (P4), pour cjb2 (mode N&B pur).
 write_pbm = (result, path) ->
