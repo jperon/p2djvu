@@ -1,0 +1,8 @@
+*.lua
+!flake.lock
+result
+result-*
+.direnv
+test.pdf
+test.djvu
+.claude/
