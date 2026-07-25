@@ -67,6 +67,11 @@ build_lut = (lo, hi) ->
 -- fond à ce centile ; dans ce cas, réduire clip_pct.
 -- Retourne un objet de même interface (.width/.height/:at), à utiliser en
 -- lieu et place de pix par la suite (binarisation, encodage couleur, etc.).
+--
+-- Si un seul canal atteint des bornes dégénérées (cf. build_lut), étirer les
+-- autres canaux quand même produirait un décalage colorimétrique (un canal
+-- inchangé, les autres étirés) : on désactive alors l'étirement pour les
+-- trois canaux, pas seulement celui en cause.
 normalize = (pix, clip_pct) ->
   clip_pct = clip_pct or 0.5
   hist_r, hist_g, hist_b = channel_histogram pix
@@ -75,6 +80,9 @@ normalize = (pix, clip_pct) ->
   lo_r, hi_r = percentile_points hist_r, total, clip_pct
   lo_g, hi_g = percentile_points hist_g, total, clip_pct
   lo_b, hi_b = percentile_points hist_b, total, clip_pct
+
+  if hi_r <= lo_r or hi_g <= lo_g or hi_b <= lo_b
+    return width: pix.width, height: pix.height, at: (x, y) => pix\at x, y
 
   lut_r = build_lut lo_r, hi_r
   lut_g = build_lut lo_g, hi_g

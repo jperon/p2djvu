@@ -66,7 +66,7 @@ Options:
                           écarts de niveaux entre pages. Surtout utile en
                           mode bw, mais s'applique à tous les modes.
   --contrast-clip N       Part en % de pixels extrêmes écrêtés par
-                          --normalize-contrast (défaut: 1.0)
+                          --normalize-contrast (défaut: 0.5)
   --no-text               Ne pas inclure le calque texte extrait du PDF
   --ocr                   OCR de secours (tesseract) si le PDF n'a pas de texte intégré
 ]]

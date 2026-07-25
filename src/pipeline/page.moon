@@ -43,9 +43,9 @@ process_page = (doc, page_number, opts, out_path) ->
   pix = normalize pix, opts.contrast_clip if opts.normalize_contrast
   mask = binarize pix, {threshold: opts.bw_threshold, bias: opts.bw_bias}
 
-  if (mode == "bw" or mode == "mixed") and mask.ink_ratio > MAX_SANE_INK_RATIO
+  if mask.ink_ratio > MAX_SANE_INK_RATIO
     error {msg: "page #{page_number + 1} : binarisation dégénérée (#{math.floor(mask.ink_ratio * 100)}% de la page classée « encre »), seuil=#{mask.threshold}. " ..
-      "Essayez --threshold-bias (valeur négative) pour réduire l'encre détectée, --mode color, ou ajustez/désactivez --normalize-contrast."}
+      "Essayez --threshold-bias (valeur négative) pour réduire l'encre détectée, ou ajustez/désactivez --normalize-contrast."}
 
   lines = nil
   if want_text
