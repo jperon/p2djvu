@@ -9,9 +9,14 @@ run = (cmd, args) ->
 
   handle = assert io.popen full, "r"
   output = handle\read "*a"
-  ok, _, code = handle\close!
-
-  if ok
+  _, _, code = handle\close!
+  -- NB : le premier retour de handle:close() (traditionnellement un booléen
+  -- "succès") s'est avéré peu fiable sous LuaJIT/io.popen pour des process
+  -- ayant échoué (renvoyait true malgré un exit code non nul, cf. le bug
+  -- silencieux découvert sur l'injection de texte DjVu) -- on se fie donc
+  -- uniquement au code de sortie explicite.
+  code = code or 0
+  if code == 0
     true, output
   else
     false, "#{cmd} a échoué (code #{code}) : #{output}"

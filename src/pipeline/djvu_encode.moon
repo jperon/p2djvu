@@ -26,9 +26,13 @@ merge_pages = (page_paths, out_djvu) ->
   error msg unless ok
 
 -- Injecte un calque texte caché sur une page (texte au format djvused set-txt,
--- voir pipeline.text_layer pour la génération de ce format).
+-- voir pipeline.text_layer pour la génération de ce format). Note : "save-page
+-- <name>" est une commande différente (extrait la page sélectionnée vers un
+-- fichier externe, <name> obligatoire) -- ce n'est PAS ce qui persiste les
+-- changements ici. C'est l'option "-s" de djvused qui sauvegarde le document
+-- modifié ; il ne faut donc pas appeler save-page dans ce script.
 set_hidden_text = (djvu_path, page_index, txt_path) ->
-  script = "select #{page_index + 1}\nset-txt #{txt_path}\nsave-page\n"
+  script = "select #{page_index + 1}\nset-txt #{txt_path}\n"
   script_path = os.tmpname!
   f = assert io.open script_path, "w"
   f\write script

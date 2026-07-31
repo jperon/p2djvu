@@ -3,6 +3,7 @@
 {:downsample} = require "pipeline.image"
 {:build, :write} = require "pipeline.sepfile"
 {:normalize} = require "pipeline.contrast"
+{:build_hidden_text} = require "pipeline.text_layer"
 encode = require "pipeline.djvu_encode"
 
 -- Au-delà de cette proportion de pixels classés "encre", la binarisation est
@@ -14,6 +15,20 @@ encode = require "pipeline.djvu_encode"
 -- 60% laisse une marge large tout en attrapant les cas réellement dégénérés
 -- (observé : 81% sur une page de BD hachurée mal seuillée).
 MAX_SANE_INK_RATIO = 0.6
+
+-- Injecte le calque texte caché sur une page déjà encodée (modes "bw"/
+-- "color" : contrairement au mode "mixed", cjb2/c44 n'ont pas de canal texte
+-- intégré à l'encodage, donc le calque est ajouté après coup via `djvused
+-- set-txt`). out_path est à ce stade un fichier .djvu à page unique, d'où
+-- l'index de page fixe (0) passé à set_hidden_text.
+inject_hidden_text = (lines, width, height, dpi, tmp_dir, page_number, out_path) ->
+  return unless lines and #lines > 0
+  txt_path = "#{tmp_dir}/page-#{page_number}.txt.djvused"
+  f = assert io.open txt_path, "w"
+  f\write build_hidden_text lines, width, height, dpi
+  f\close!
+  encode.set_hidden_text out_path, 0, txt_path
+  os.remove txt_path
 
 -- doc : ffi.mupdf.Document. page_number : 0-indexé. opts :
 --   mode: "bw" | "color" | "mixed" (défaut "mixed")
@@ -58,12 +73,14 @@ process_page = (doc, page_number, opts, out_path) ->
       require("pipeline.binarize").write_pbm mask, pbm_path
       encode.encode_bw pbm_path, out_path
       os.remove pbm_path
+      inject_hidden_text lines, pix.width, pix.height, mask_dpi, tmp_dir, page_number, out_path
 
     when "color"
       ppm_path = "#{tmp_dir}/page-#{page_number}.ppm"
       require("pipeline.image").write_ppm pix, ppm_path
       encode.encode_color ppm_path, out_path
       os.remove ppm_path
+      inject_hidden_text lines, pix.width, pix.height, mask_dpi, tmp_dir, page_number, out_path
 
     else -- "mixed"
       background = downsample pix, bg_width
